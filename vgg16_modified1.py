@@ -81,6 +81,7 @@ class vgg16(Network):
       # conv 64 * 3 * 3
       # conv 64 * 3 * 3
       # maxpool 2 * 2
+      # output shape : 112 * 112 * 64
       net = slim.repeat(self._image, 2, slim.conv2d, 64, [3, 3],
                         trainable=False, scope='conv1')
       net = slim.max_pool2d(net, [2, 2], padding='SAME', scope='pool1')
@@ -89,7 +90,7 @@ class vgg16(Network):
       # input shape : 112 * 112 * 64
       # conv 128 * 3 * 3
       # conv 128 * 3 * 3
-      # maxpool 2 * 2
+      # output shape : 56 * 56 * 128
       net = slim.repeat(net, 2, slim.conv2d, 128, [3, 3],
                         trainable=False, scope='conv2')
       net = slim.max_pool2d(net, [2, 2], padding='SAME', scope='pool2')
@@ -97,40 +98,40 @@ class vgg16(Network):
 
       # [Hand Detection] All later conv layers are 128 * 3 * 3 --> same shape 
       # [Hand Detection] REMOVE net = slim.max_pool2d(net, [2, 2], padding='SAME', scope='pool3') 
-      # [VGG16] conv3
+      # [Hand Detection] conv3
       # input shape : 56 * 56 * 128
       # conv 128 * 3 * 3
       # conv 128 * 3 * 3
       # conv 128 * 3 * 3
-      # maxpool 2 * 2
+      # output shape : 56 * 56 * 128
       net = slim.repeat(net, 3, slim.conv2d, 128, [3, 3],
                         trainable=is_training, scope='conv3')
-      to_be_normalized_1 = net # 56 * 56 * 128
+      to_be_normalized_1 = net 
 
 
-      # [VGG16] conv4
+      # [Hand Detection] conv4
       # input shape : 56 * 56 * 128
       # conv 128 * 3 * 3
       # conv 128 * 3 * 3
       # conv 128 * 3 * 3
-      # maxpool 2 * 2
+      # output shape : 56 * 56 * 128
       net = slim.repeat(net, 3, slim.conv2d, 128, [3, 3],
                         trainable=is_training, scope='conv4')
-      to_be_normalized_2 = net # 56 * 56 * 128
+      to_be_normalized_2 = net 
 
 
-      # [VGG16] conv5
+      # [Hand Detection] conv5
       # input shape : 56 * 56 * 128
       # conv 128 * 3 * 3
       # conv 128 * 3 * 3
       # conv 128 * 3 * 3
-      # maxpool 2 * 2
+      # output shape : 56 * 56 * 128
       net = slim.repeat(net, 3, slim.conv2d, 128, [3, 3],
                         trainable=is_training, scope='conv5')
       to_be_normalized_3 = net # 56 * 56 * 128
       
       # [Hand detection]
-      # Use the result of conv3, conv4 and conv5
+      # The result of conv3-5: 56 * 
       # normalize and concat them, then use 1*1 conv, then use RPN
       # use the result of 3 layers and RPN in training loop
 
