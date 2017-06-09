@@ -95,36 +95,37 @@ class vgg16(Network):
       net = slim.max_pool2d(net, [2, 2], padding='SAME', scope='pool2')
 
 
+      # [Hand Detection] All later conv layers are 128 * 3 * 3 --> same shape 
+      # [Hand Detection] REMOVE net = slim.max_pool2d(net, [2, 2], padding='SAME', scope='pool3') 
       # [VGG16] conv3
       # input shape : 56 * 56 * 128
-      # conv 256 * 3 * 3 should we change this to 128 ???
-      # conv 256 * 3 * 3
-      # conv 256 * 3 * 3
+      # conv 128 * 3 * 3
+      # conv 128 * 3 * 3
+      # conv 128 * 3 * 3
       # maxpool 2 * 2
-      net = slim.repeat(net, 3, slim.conv2d, 256, [3, 3],
+      net = slim.repeat(net, 3, slim.conv2d, 128, [3, 3],
                         trainable=is_training, scope='conv3')
       to_be_normalized_1 = net # 56 * 56 * 128
-      # [Hand Detection] REMOVE net = slim.max_pool2d(net, [2, 2], padding='SAME', scope='pool3') 
+
 
       # [VGG16] conv4
       # input shape : 56 * 56 * 128
-      # conv 512 * 3 * 3
-      # conv 512 * 3 * 3
-      # conv 512 * 3 * 3
+      # conv 128 * 3 * 3
+      # conv 128 * 3 * 3
+      # conv 128 * 3 * 3
       # maxpool 2 * 2
-      net = slim.repeat(net, 3, slim.conv2d, 512, [3, 3],
+      net = slim.repeat(net, 3, slim.conv2d, 128, [3, 3],
                         trainable=is_training, scope='conv4')
       to_be_normalized_2 = net # 56 * 56 * 128
 
-      # [Hand Detection] REMOVE net = slim.max_pool2d(net, [2, 2], padding='SAME', scope='pool4') 
 
       # [VGG16] conv5
       # input shape : 56 * 56 * 128
-      # conv 512 * 3 * 3
-      # conv 512 * 3 * 3
-      # conv 512 * 3 * 3
+      # conv 128 * 3 * 3
+      # conv 128 * 3 * 3
+      # conv 128 * 3 * 3
       # maxpool 2 * 2
-      net = slim.repeat(net, 3, slim.conv2d, 512, [3, 3],
+      net = slim.repeat(net, 3, slim.conv2d, 128, [3, 3],
                         trainable=is_training, scope='conv5')
       to_be_normalized_3 = net # 56 * 56 * 128
       
