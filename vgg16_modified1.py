@@ -142,22 +142,15 @@ class vgg16(Network):
       concated = tf.concat([normalized_1, normalized_2, normalized_3], 2)
 
       ## [Hand Detection] Add 1*1 conv to return the channel to 512
-      net = slim.conv2d(concated, 512, [1, 1], trainable=is_training, weights_initializer=initializer, scope='normalize_concat_return/1x1')
+      # net = slim.conv2d(concated, 512, [1, 1], trainable=is_training, weights_initializer=initializer, scope='normalize_concat_return/1x1')
 
       # [Faster RCNN] summary and anchor
       self._act_summaries.append(net)
       self._layers['head'] = net
       self._anchor_component()
-      
-      # [Hand detection]
-      # The result of conv3-5: 56 * 56 * 128 each
-      # For each layer, we need to normalize them (56 * 56, 128 channels)
-      # Then we need to concat results of 3 layers and use 1*1 conv to reshape them as the input shape of RPN
-      # Then we use RPN
-      # The results of  3 layers and RPN will be used in training loop
 
-# ------------- RPN Begin --------------------------------
-## %%%%%%%%%% RPN Begin %%%%%%%%%% ##
+
+      # [Hand Detection] RPN
       # [Faster RCNN] RPN: put features into RPN layer --> get proposals
       # input features(or anchors?), output rois(proposals)
       # [Hand Detection] Normalize , concat, then use 1*1 conv, finally the data will be treated as the input here
@@ -186,21 +179,25 @@ class vgg16(Network):
           rois, _ = self._proposal_top_layer(rpn_cls_prob, rpn_bbox_pred, "rois")
         else:
           raise NotImplementedError
-# ------------- RPN End ----------------------------------
+      # ------------- RPN End ----------------------------------
 
-# ------------- ROI Pooling Begin ------------------------
+      # [Hand Detection] ROI Pooling
       # [Faster RCNN] build roi pooling layer(here is same with RCNN)
-      # [Hand Detection] add another 2 roi pooling layer
+      # [Hand Detection] add another 2 roi pooling layer, then normalize them, 
       # Input: proposals(rois) from RPN and features from CNN 
       if cfg.POOLING_MODE == 'crop':
-        pool5 = self._crop_pool_layer(net, rois, "pool5")
+        roi_pool_1 = self._crop_pool_layer(to_be_normalized_1, rois, "roi_pool_1")
+        roi_pool_2 = self._crop_pool_layer(to_be_normalized_2, rois, "roi_pool_2")
+        roi_pool_3 = self._crop_pool_layer(to_be_normalized_3, rois, "roi_pool_3")
+        roi_pool_1_normalized = tf.nn.l2_normalize(roi_pool_1, dim = [0, 1])
+        roi_pool_2_normalized = tf.nn.l2_normalize(roi_pool_2, dim = [0, 1])
+        roi_pool_3_normalized = tf.nn.l2_normalize(roi_pool_3, dim = [0, 1])
+        pool5 = tf.concat([roi_pool_1_normalized, roi_pool_1_normalized, roi_pool_1_normalized], 2)
+        # [Hand Detection] add 1*1 conv
+        # net = slim.conv2d(concated, 512, [1, 1], trainable=is_training, weights_initializer=initializer, scope='normalize_concat_return/1x1')
       else:
         raise NotImplementedError
-# ------------- ROI Pooling End --------------------------
-
-      # [Hand Detection] Then we use 3 normalize layers
-      # [Hand Detection] Then we concat them
-      # [Hand Detection] Then we use 1*1 conv to return the channel size
+      # ------------- ROI End ----------------------------------
 
 
       # [VGG16] flatten
