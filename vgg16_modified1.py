@@ -129,15 +129,32 @@ class vgg16(Network):
       net = slim.repeat(net, 3, slim.conv2d, 128, [3, 3],
                         trainable=is_training, scope='conv5')
       to_be_normalized_3 = net # 56 * 56 * 128
+
+
+      ## [Hand Detection] Here we perform normalization
+      # Currently we just do normalization(channel) but do not perform scaling
+      normalized_1 = tf.nn.l2_normalize(to_be_normalized_1, dim = [0, 1])
+      normalized_2 = tf.nn.l2_normalize(to_be_normalized_2, dim = [0, 1])
+      normalized_3 = tf.nn.l2_normalize(to_be_normalized_3, dim = [0, 1])
+
+      ## [Hand Detection] Concat the normalized layers
+      # [56 * 56 * 128] + [56 * 56 * 128] + [56 * 56 * 128] = [56 * 56 * 384]
+      concated = tf.concat([normalized_1, normalized_2, normalized_3], 2)
+
+      ## [Hand Detection] Add 1*1 conv to return the channel to 512
+      net = slim.conv2d(concated, 512, [1, 1], trainable=is_training, weights_initializer=initializer, scope='normalize_concat_return/1x1')
+
+      # [Faster RCNN] summary and anchor
+      self._act_summaries.append(net)
+      self._layers['head'] = net
+      self._anchor_component()
       
       # [Hand detection]
-      # The result of conv3-5: 56 * 
-      # normalize and concat them, then use 1*1 conv, then use RPN
-      # use the result of 3 layers and RPN in training loop
-
-      # // self._act_summaries.append(net)
-      # // self._layers['head'] = net
-      # // self._anchor_component() # Yunqiu Xu: generate anchors?
+      # The result of conv3-5: 56 * 56 * 128 each
+      # For each layer, we need to normalize them (56 * 56, 128 channels)
+      # Then we need to concat results of 3 layers and use 1*1 conv to reshape them as the input shape of RPN
+      # Then we use RPN
+      # The results of  3 layers and RPN will be used in training loop
 
 # ------------- RPN Begin --------------------------------
 ## %%%%%%%%%% RPN Begin %%%%%%%%%% ##
