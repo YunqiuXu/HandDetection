@@ -4,7 +4,7 @@
 # --------------------------------------------------------
 #Usage:
 #Put this script under train folder
-#Create a new folder name "Annotations"
+#Create a new folder name "Annotations" in train folder
 #Run this script
 
 from xml.dom.minidom import Document
