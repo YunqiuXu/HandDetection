@@ -123,6 +123,7 @@ def generate_xml(name,img_size):
 
 
 if __name__ == '__main__':
+    files=os.listdir(annotation_path)
     for name in files:
         name=name[:-4]  #delete ".txt"
         print("Processing "+name)
