@@ -3,7 +3,7 @@
 # Copyright (c) 2015 Microsoft
 # Licensed under The MIT License [see LICENSE for details]
 # Written by Ross Girshick and Xinlei Chen
-# Modified by Shaoshen Wang
+
 # --------------------------------------------------------
 from __future__ import absolute_import
 from __future__ import division
