@@ -32,7 +32,7 @@ class pascal_voc(imdb):
     self._devkit_path = self._get_default_path() if devkit_path is None \
       else devkit_path
     self._data_path = os.path.join(self._devkit_path, 'VOC' + self._year)
-
+    #[Hand Detection]
     #Substitute original _classes with 1+4 classes 
     #["leftHand_driver","rightHand_driver","leftHand_passenger","rightHand_passenger"]+background
 
