@@ -18,27 +18,33 @@ Created on Sat Jun 24 19:26:54 2017
 import os
 
 annotation_path = "./posGt/" 
-result_path = "./Main/"
+result_path = "./ImageSets/Main/"
 
-ratio=0.8  #(train/total) 
+ratio_trainval = 0.5  #(trainval/total) 
+ratio_train = 0.5    #(train/trainval)
 
 def create_train_val_trainval():
     files = os.listdir(annotation_path)
     total_cases = len(files)
-    total_train = int(ratio*total_cases)   
-    train_cases = files[:total_train]     #Spilt into train and validation
-    val_cases = files[total_train:]
+    t2 = int(ratio_trainval*total_cases)
+    t1 = int(ratio_train*t2)
+    train_cases=files[:t1]
+    val_cases=files[t1:t2]
+    test_cases=files[t2:]
+    
     train_txt = ""
     val_txt = ""
     trainval_txt = ""
+    test_txt=""
     
     for file in train_cases:
         train_txt += file[:-4] + "\n"  #Delete ".txt"
     for file in val_cases:
         val_txt += file[:-4] + "\n"
-    for file in files:
-        trainval_txt += file[:-4] + "\n"
-    
+    trainval_txt = train_txt+val_txt
+    for file in test_cases:
+        test_txt += file[:-4] + "\n"
+        
     f = open(result_path+"train.txt","w")
     f.write(train_txt)
     f.close()
@@ -48,6 +54,9 @@ def create_train_val_trainval():
     f = open(result_path+"trainval.txt","w")
     f.write(trainval_txt)
     f.close()
+    f = open(result_path+"test.txt","w")
+    f.write(test_txt)
+    f.close()
 
 def create_train_for_classes():               #Not being used so far
     files = os.listdir(annotation_path)
@@ -55,9 +64,10 @@ def create_train_for_classes():               #Not being used so far
     total_train = 3
     total_test = 0
     record = [[],[],[],[]]
-    names = ["leftHand_driver","rightHand_driver","leftHand_passenger","rightHand_passenger"]    
-    train_cases = files[:total_train]
+    names = ["leftHand_driver","rightHand_driver","leftHand_passenger","rightHand_passenger"]
     
+    
+    train_cases = files[:total_train]
     for case in train_cases:
         file = open(annotation_path+case)
         lines = file.readlines()
@@ -92,4 +102,5 @@ def create_train_for_classes():               #Not being used so far
         
 if __name__ == '__main__':
     create_train_val_trainval()
+    
     
