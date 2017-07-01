@@ -2,15 +2,26 @@
 # Tensorflow Faster R-CNN
 # Licensed under The MIT License [see LICENSE for details]
 # Written by Xinlei Chen
+# Modified by Yunqiu Xu
 # --------------------------------------------------------
 
-# --------------------------------------------------------
-# [Modified by Yunqiu Xu]
-# Ref:
-#   https://leonardoaraujosantos.gitbooks.io/artificial-inteligence/content/object_localization_and_detection.html
-#   http://blog.csdn.net/shenxiaolu1984/article/details/51152614
-#   http://closure11.com/rcnn-fast-rcnn-faster-rcnn%E7%9A%84%E4%B8%80%E4%BA%9B%E4%BA%8B/
-#   http://blog.csdn.net/lanran2/article/details/60143861
+
+# A revision of VGG16 (tensorflow backend)
+# Input : 224 * 224 * 3
+# (after) conv1 : 224 * 224 * 64
+# maxpool : 112 * 112 * 64
+# conv2 : 112 * 112 * 128
+# maxpool : 56 * 56 * 128
+# conv3 : 56 * 56 * 256
+# maxpool : 28 * 28 * 256
+# conv4 : 28 * 28 * 512
+# maxpool : 14 * 14 * 512
+# conv5 : 14 * 14 * 512
+# maxpool : 7 * 7 * 512
+# fc6 : 4096
+# fc7 : 4096
+# ---------------------------------------------------------
+
 
 # Why Faster RCNN is faster : RPN
 #   RCNN: 
@@ -20,6 +31,7 @@
 #   Faster RCNN:
 #      get features first --> get proposals from RPN --> send proposal and features to ROI pooling
 # ---------------------------------------------------------
+
 
 # ------------- To do 1: Multiple Scale Faster-RCNN ------
 # Combine both global and local features --> enhance hand detecting in an image
@@ -66,6 +78,30 @@ class vgg16(Network):
     Network.__init__(self, batch_size=batch_size)
     self._arch = 'vgg16'
 
+  # [Hand Detection] Batch normalization
+  # http://stackoverflow.com/a/34634291/2267819
+  # Note that this is different from the paper(they use another method)
+  def batch_norm_layer(self, to_be_normalized, is_training):
+    if is_training:
+      train_phase = tf.constant(1)
+    else:
+      train_phase = tf.constant(-1)
+    beta = tf.Variable(tf.constant(0.0, shape=[to_be_normalized.shape[-1]]), name='beta', trainable=True)
+    gamma = tf.Variable(tf.constant(1.0, shape=[to_be_normalized.shape[-1]]), name='gamma', trainable=True)
+    axises = np.arange(len(to_be_normalized.shape) - 1)
+    batch_mean, batch_var = tf.nn.moments(to_be_normalized, axises, name='moments')
+    ema = tf.train.ExponentialMovingAverage(decay=0.5)
+
+    def mean_var_with_update():
+        ema_apply_op = ema.apply([batch_mean, batch_var])
+        with tf.control_dependencies([ema_apply_op]):
+            return tf.identity(batch_mean), tf.identity(batch_var)
+
+    mean, var = tf.cond(train_phase > 0, mean_var_with_update, lambda: (ema.average(batch_mean), ema.average(batch_var))) # if is training --> update
+    normed = tf.nn.batch_normalization(to_be_normalized, mean, var, beta, gamma, 1e-3)
+    return normed
+
+
   def build_network(self, sess, is_training=True):
     with tf.variable_scope('vgg_16', 'vgg_16'):
       # select initializers
@@ -78,9 +114,6 @@ class vgg16(Network):
 
       # [VGG16] conv1
       # input shape : 224 * 224 * 3
-      # conv 64 * 3 * 3
-      # conv 64 * 3 * 3
-      # maxpool 2 * 2
       # output shape : 112 * 112 * 64
       net = slim.repeat(self._image, 2, slim.conv2d, 64, [3, 3],
                         trainable=False, scope='conv1')
@@ -88,73 +121,66 @@ class vgg16(Network):
 
       # [VGG16] conv2
       # input shape : 112 * 112 * 64
-      # conv 128 * 3 * 3
-      # conv 128 * 3 * 3
       # output shape : 56 * 56 * 128
       net = slim.repeat(net, 2, slim.conv2d, 128, [3, 3],
                         trainable=False, scope='conv2')
       net = slim.max_pool2d(net, [2, 2], padding='SAME', scope='pool2')
 
 
-      # [Hand Detection] All later conv layers are 128 * 3 * 3 --> same shape 
       # [Hand Detection] REMOVE net = slim.max_pool2d(net, [2, 2], padding='SAME', scope='pool3') 
       # [Hand Detection] conv3
       # input shape : 56 * 56 * 128
-      # conv 128 * 3 * 3
-      # conv 128 * 3 * 3
-      # conv 128 * 3 * 3
-      # output shape : 56 * 56 * 128
-      net = slim.repeat(net, 3, slim.conv2d, 128, [3, 3],
+      # output shape : 56 * 56 * 256
+      net = slim.repeat(net, 3, slim.conv2d, 256, [3, 3],
                         trainable=is_training, scope='conv3')
       to_be_normalized_1 = net 
-
-
       # [Hand Detection] conv4
-      # input shape : 56 * 56 * 128
-      # conv 128 * 3 * 3
-      # conv 128 * 3 * 3
-      # conv 128 * 3 * 3
-      # output shape : 56 * 56 * 128
-      net = slim.repeat(net, 3, slim.conv2d, 128, [3, 3],
+      # input shape : 56 * 56 * 256
+      # output shape : 56 * 56 * 256
+      net = slim.repeat(net, 3, slim.conv2d, 256, [3, 3],
                         trainable=is_training, scope='conv4')
       to_be_normalized_2 = net 
-
-
       # [Hand Detection] conv5
-      # input shape : 56 * 56 * 128
-      # conv 128 * 3 * 3
-      # conv 128 * 3 * 3
-      # conv 128 * 3 * 3
-      # output shape : 56 * 56 * 128
-      net = slim.repeat(net, 3, slim.conv2d, 128, [3, 3],
+      # input shape : 56 * 56 * 256
+      # output shape : 56 * 56 * 256
+      net = slim.repeat(net, 3, slim.conv2d, 256, [3, 3],
                         trainable=is_training, scope='conv5')
-      to_be_normalized_3 = net # 56 * 56 * 128
+      to_be_normalized_3 = net 
+      
+      # ------------- Currently useless ------------------------
+      # // self._act_summaries.append(net)
+      # // self._layers['head'] = net
+      # // self._anchor_component() # generate anchors?
+      # ------------- Maybe this is just log -------------------
 
 
-      ## [Hand Detection] Here we perform normalization
-      # Currently we just do normalization(channel) but do not perform scaling
-      normalized_1 = tf.nn.l2_normalize(to_be_normalized_1, dim = [0, 1])
-      normalized_2 = tf.nn.l2_normalize(to_be_normalized_2, dim = [0, 1])
-      normalized_3 = tf.nn.l2_normalize(to_be_normalized_3, dim = [0, 1])
+# ------------- Take a break -----------------------------
+# Now as we get to_be_normalized_1 / to_be_normalized_2 / to_be_normalized_3, each is 56 * 56 * 256
+# For RPN , we need to: 
+# 1. normalize each to_be_normalized layer
+# 2. concat 3 normalized layers
+# 3. change the dimension using 1 * 1 conv
+# 3. Then the modified net can be used in RPN
+# 
+# For ROI pooling, we need to:
+# 1. put each conv output into its ROI pooling (so there should be 3 ROI pooling layers)
+# 2. normalize each layer
+# 3. concat them
+# 4. change the dimension using 1 * 1 conv
+# --------------------------------------------------------
 
-      ## [Hand Detection] Concat the normalized layers
-      # [56 * 56 * 128] + [56 * 56 * 128] + [56 * 56 * 128] = [56 * 56 * 384]
-      concated = tf.concat([normalized_1, normalized_2, normalized_3], 2)
+      # ------------- Normalization for RPN --------------------
+      normed_1_rpn = self.batch_norm_layer(to_be_normalized_1, is_training)
+      normed_2_rpn = self.batch_norm_layer(to_be_normalized_2, is_training)
+      normed_3_rpn = self.batch_norm_layer(to_be_normalized_3, is_training)
+      # ------------- Concatation for RPN (56 * 56 * 768) ------
+      concated_rpn = tf.concat([normed_1_rpn, normed_2_rpn, normed_3_rpn], 0) # for 0.* version, dim should be in front of list
+      # ------------- 1 * 1 conv -------------------------------
+      scaled_rpn = slim.conv2d(concated_rpn, 512, [1, 1], trainable=is_training, weights_initializer=initializer, scope="scaled_rpn/1x1")
+      # Then we can get 56 * 56 * 512
 
-      ## [Hand Detection] Add 1*1 conv to return the channel to 512
-      # net = slim.conv2d(concated, 512, [1, 1], trainable=is_training, weights_initializer=initializer, scope='normalize_concat_return/1x1')
-
-      # [Faster RCNN] summary and anchor
-      self._act_summaries.append(net)
-      self._layers['head'] = net
-      self._anchor_component()
-
-
-      # [Hand Detection] RPN
-      # [Faster RCNN] RPN: put features into RPN layer --> get proposals
-      # input features(or anchors?), output rois(proposals)
-      # [Hand Detection] Normalize , concat, then use 1*1 conv, finally the data will be treated as the input here
-      rpn = slim.conv2d(net, 512, [3, 3], trainable=is_training, weights_initializer=initializer, scope="rpn_conv/3x3")
+      # ------------- RPN Begin --------------------------------
+      rpn = slim.conv2d(scaled_rpn, 512, [3, 3], trainable=is_training, weights_initializer=initializer, scope="rpn_conv/3x3")
       self._act_summaries.append(rpn)
       rpn_cls_score = slim.conv2d(rpn, self._num_anchors * 2, [1, 1], trainable=is_training,
                                   weights_initializer=initializer,
@@ -181,23 +207,24 @@ class vgg16(Network):
           raise NotImplementedError
       # ------------- RPN End ----------------------------------
 
-      # [Hand Detection] ROI Pooling
-      # [Faster RCNN] build roi pooling layer(here is same with RCNN)
-      # [Hand Detection] add another 2 roi pooling layer, then normalize them, 
-      # Input: proposals(rois) from RPN and features from CNN 
+
+      # ------------- ROI Pooling Begin ------------------------
       if cfg.POOLING_MODE == 'crop':
-        roi_pool_1 = self._crop_pool_layer(to_be_normalized_1, rois, "roi_pool_1")
-        roi_pool_2 = self._crop_pool_layer(to_be_normalized_2, rois, "roi_pool_2")
-        roi_pool_3 = self._crop_pool_layer(to_be_normalized_3, rois, "roi_pool_3")
-        roi_pool_1_normalized = tf.nn.l2_normalize(roi_pool_1, dim = [0, 1])
-        roi_pool_2_normalized = tf.nn.l2_normalize(roi_pool_2, dim = [0, 1])
-        roi_pool_3_normalized = tf.nn.l2_normalize(roi_pool_3, dim = [0, 1])
-        pool5 = tf.concat([roi_pool_1_normalized, roi_pool_1_normalized, roi_pool_1_normalized], 2)
-        # [Hand Detection] add 1*1 conv
-        # net = slim.conv2d(concated, 512, [1, 1], trainable=is_training, weights_initializer=initializer, scope='normalize_concat_return/1x1')
+        # get roi layers
+        roi1 = self._crop_pool_layer(to_be_normalized_1, rois, "roi1")
+        roi2 = self._crop_pool_layer(to_be_normalized_2, rois, "roi2")
+        roi3 = self._crop_pool_layer(to_be_normalized_3, rois, "roi3")
+        # normalization
+        normed_1_roi = self.batch_norm_layer(roi1, is_training)
+        normed_2_roi = self.batch_norm_layer(roi2, is_training)
+        normed_3_roi = self.batch_norm_layer(roi3, is_training)
+        # concat
+        concated_roi = tf.concat([normed_1_roi, normed_2_roi, normed_3_roi], 0)
+        # scale
+        pool5 = slim.conv2d(concated_roi, 512, [1, 1], trainable=is_training, weights_initializer=initializer, scope="pool5/1x1")
       else:
         raise NotImplementedError
-      # ------------- ROI End ----------------------------------
+      # ------------- ROI Pooling End --------------------------
 
 
       # [VGG16] flatten

@@ -127,9 +127,14 @@ if __name__ == '__main__':
     for name in files:
         name=name[:-4]  #delete ".txt"
         print("Processing "+name)
-        img_size = cv2.imread(image_path+name+".png").shape
-        print(img_size)
-        generate_xml(name,img_size)
+        try:
+            img_size = cv2.imread(image_path+name+".png")
+            print type(img_size)
+            img_size = image_size.shape
+            print(img_size)
+            generate_xml(name,img_size)
+        except:
+            print 'Fuck! Something wrong!'
     
     
 
