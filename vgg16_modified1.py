@@ -146,13 +146,6 @@ class vgg16(Network):
       net = slim.repeat(net, 3, slim.conv2d, 256, [3, 3],
                         trainable=is_training, scope='conv5')
       to_be_normalized_3 = net 
-      
-      # ------------- Currently useless ------------------------
-      # // self._act_summaries.append(net)
-      # // self._layers['head'] = net
-      # // self._anchor_component() # generate anchors?
-      # ------------- Maybe this is just log -------------------
-
 
 # ------------- Take a break -----------------------------
 # Now as we get to_be_normalized_1 / to_be_normalized_2 / to_be_normalized_3, each is 56 * 56 * 256
@@ -170,14 +163,27 @@ class vgg16(Network):
 # --------------------------------------------------------
 
       # ------------- Normalization for RPN --------------------
+      # old version 
+      # normed_1_rpn = tf.nn.l2_normalize(to_be_normalized_1, dim = [0, 1])
+      # normed_2_rpn = tf.nn.l2_normalize(to_be_normalized_2, dim = [0, 1])
+      # normed_3_rpn = tf.nn.l2_normalize(to_be_normalized_3, dim = [0, 1])
       normed_1_rpn = self.batch_norm_layer(to_be_normalized_1, is_training)
       normed_2_rpn = self.batch_norm_layer(to_be_normalized_2, is_training)
       normed_3_rpn = self.batch_norm_layer(to_be_normalized_3, is_training)
+      
       # ------------- Concatation for RPN (56 * 56 * 768) ------
-      concated_rpn = tf.concat([normed_1_rpn, normed_2_rpn, normed_3_rpn], 0) # for 0.* version, dim should be in front of list
+      # old version
+      # concated_rpn = tf.concat([normed_1_rpn, normed_2_rpn, normed_3_rpn], 2)
+      concated_rpn = tf.concat([normed_1_rpn, normed_2_rpn, normed_3_rpn], 0)
+     
       # ------------- 1 * 1 conv -------------------------------
       scaled_rpn = slim.conv2d(concated_rpn, 512, [1, 1], trainable=is_training, weights_initializer=initializer, scope="scaled_rpn/1x1")
       # Then we can get 56 * 56 * 512
+
+      # [Faster RCNN] summary and anchor
+      self._act_summaries.append(scaled_rpn)
+      self._layers['head'] = scaled_rpn
+      self._anchor_component()
 
       # ------------- RPN Begin --------------------------------
       rpn = slim.conv2d(scaled_rpn, 512, [3, 3], trainable=is_training, weights_initializer=initializer, scope="rpn_conv/3x3")
@@ -211,19 +217,29 @@ class vgg16(Network):
       # ------------- ROI Pooling Begin ------------------------
       if cfg.POOLING_MODE == 'crop':
         # get roi layers
-        roi1 = self._crop_pool_layer(to_be_normalized_1, rois, "roi1")
-        roi2 = self._crop_pool_layer(to_be_normalized_2, rois, "roi2")
-        roi3 = self._crop_pool_layer(to_be_normalized_3, rois, "roi3")
+        roi1 = self._crop_pool_layer(to_be_normalized_1, rois, "roi1") # 28 * 28 * 256
+        roi2 = self._crop_pool_layer(to_be_normalized_2, rois, "roi2") # 28 * 28 * 256
+        roi3 = self._crop_pool_layer(to_be_normalized_3, rois, "roi3") # 28 * 28 * 256
         # normalization
         normed_1_roi = self.batch_norm_layer(roi1, is_training)
         normed_2_roi = self.batch_norm_layer(roi2, is_training)
         normed_3_roi = self.batch_norm_layer(roi3, is_training)
         # concat
-        concated_roi = tf.concat([normed_1_roi, normed_2_roi, normed_3_roi], 0)
+        concated_roi = tf.concat([normed_1_roi, normed_2_roi, normed_3_roi], 0) # 28 * 28 * 768
         # scale
-        pool5 = slim.conv2d(concated_roi, 512, [1, 1], trainable=is_training, weights_initializer=initializer, scope="pool5/1x1")
+        pool5 = slim.conv2d(concated_roi, 512, [1, 1], trainable=is_training, weights_initializer=initializer, scope="pool5/1x1") # 28 * 28 * 512
       else:
         raise NotImplementedError
+      # old version
+      # if cfg.POOLING_MODE == 'crop':
+      #  roi_pool_1 = self._crop_pool_layer(to_be_normalized_1, rois, "roi_pool_1")
+      #  roi_pool_2 = self._crop_pool_layer(to_be_normalized_2, rois, "roi_pool_2")
+      #  roi_pool_3 = self._crop_pool_layer(to_be_normalized_3, rois, "roi_pool_3")
+
+      #  roi_pool_1_normalized = tf.nn.l2_normalize(roi_pool_1, dim = [0, 1])
+      #  roi_pool_2_normalized = tf.nn.l2_normalize(roi_pool_2, dim = [0, 1])
+      #  roi_pool_3_normalized = tf.nn.l2_normalize(roi_pool_3, dim = [0, 1])
+      #  pool5 = tf.concat([roi_pool_1_normalized, roi_pool_1_normalized, roi_pool_1_normalized], 2)
       # ------------- ROI Pooling End --------------------------
 
 
