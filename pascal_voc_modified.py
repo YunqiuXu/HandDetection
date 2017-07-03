@@ -3,7 +3,7 @@
 # Copyright (c) 2015 Microsoft
 # Licensed under The MIT License [see LICENSE for details]
 # Written by Ross Girshick and Xinlei Chen
-
+# Modified by Shaoshen Wang
 # --------------------------------------------------------
 from __future__ import absolute_import
 from __future__ import division
@@ -40,7 +40,7 @@ class pascal_voc(imdb):
                      'leftHand_driver', 'rightHand_driver', 'leftHand_passenger', 'rightHand_passenger'
                      )
     self._class_to_ind = dict(list(zip(self.classes, list(range(self.num_classes)))))
-    self._image_ext = '.jpg'
+    self._image_ext = '.png'
     self._image_index = self._load_image_set_index()
     # Default to roidb handler
     self._roidb_handler = self.gt_roidb
@@ -166,10 +166,11 @@ class pascal_voc(imdb):
     for ix, obj in enumerate(objs):
       bbox = obj.find('bndbox')
       # Make pixel indexes 0-based
-      x1 = float(bbox.find('xmin').text) - 1
-      y1 = float(bbox.find('ymin').text) - 1
-      x2 = float(bbox.find('xmax').text) - 1
-      y2 = float(bbox.find('ymax').text) - 1
+      # Delete "-1" cause it is only used in matlab
+      x1 = float(bbox.find('xmin').text) 
+      y1 = float(bbox.find('ymin').text) 
+      x2 = float(bbox.find('xmax').text) 
+      y2 = float(bbox.find('ymax').text) 
       cls = self._class_to_ind[obj.find('name').text.lower().strip()]
       boxes[ix, :] = [x1, y1, x2, y2]
       gt_classes[ix] = cls
