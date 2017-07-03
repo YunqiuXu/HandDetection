@@ -1,0 +1,38 @@
+
+Generate annotations
+Generate 4 txt file train.txt val.txt trainval.txt test.txt under Main
+
+Error: overlaps = entry['max_overlaps']:
+Delete data/cache folder，因为里面保存了上一次数据集的roidb。因为错误显示加载了以前的文件。
+
+Config.py:
+暂时去掉使用flip扩增数据集的方法
+
+Pascal_voc.py:
+1）修改大小写obj.find('name').text.lower() delete lower()
+
+2）Delete -1 in 
+x1 = float(bbox.find('xmin').text)-1…
+y2 = float(bbox.find('ymax').text)-1
+
+因为原坐标位置起始是(1,1)，现在是(0,0)
+
+3）修改分类class 为4+1类
+4）修改jpg为png，因为新数据集图像格式改变了
+
+Vgg16:
+1）修改网络
+2）添加slice操作修复concat之后channel多余的问题
+3）修改load pretrain model时需要加载的参数
+
+Error: Train loss 出现NAN：
+重新制作数据集，问题消失，怀疑之前数据集有损坏。
+
+Error:  rpn_cls_score与 label不匹配，reshape无法完成：
+Label长度代表了anchor数量
+通过查找anchor产生过程发现产生anchor的数量是根据input(224*224) resize得到的，resize的ratio被写死了，需要修改。
+修改network.py self._feat_stride, self._feat_compress 
+从16改为4.
+Change this ratio to 4 = input width/conv5 width = 224/56 = 4 in modified case
+
+
