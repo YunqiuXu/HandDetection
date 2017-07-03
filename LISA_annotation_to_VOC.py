@@ -80,6 +80,11 @@ def generate_xml(name,img_size):
         title_text = doc.createTextNode(str(img_size[2]))
         title.appendChild(title_text)
         size.appendChild(title)
+        
+        title = doc.createElement('segmented')
+        title_text = doc.createTextNode('0')
+        title.appendChild(title_text)
+        annotation.appendChild(title)
 
         # A loop for several objects to be detected
         #The bounding boxes are described using the top left point, a width, and a height [x y w h] in the 2D image plane.=>[xmin,ymin,xmax,ymax]
@@ -87,7 +92,7 @@ def generate_xml(name,img_size):
             data=lines[i].strip().split(" ")
             name=data[0]
             x,y,w,h=int(data[1]),int(data[2]),int(data[3]),int(data[4])
-            xmin,ymin,xmax,ymax=x,y-h,x+w,y
+            xmin,ymin,xmax,ymax=x,y,x+w,y+h
             
         
             object = doc.createElement('object')
@@ -96,7 +101,24 @@ def generate_xml(name,img_size):
             title_text = doc.createTextNode(name)
             title.appendChild(title_text)
             object.appendChild(title)
-
+            
+                        
+            title = doc.createElement('pose')
+            title_text = doc.createTextNode('Unspecified')
+            title.appendChild(title_text)
+            object.appendChild(title)
+            
+            title = doc.createElement('truncated')
+            title_text = doc.createTextNode('0')
+            title.appendChild(title_text)
+            object.appendChild(title)
+            
+            title = doc.createElement('difficult')
+            title_text = doc.createTextNode('0')
+            title.appendChild(title_text)
+            object.appendChild(title)
+            
+            
             bndbox = doc.createElement('bndbox')
             object.appendChild(bndbox)
             title = doc.createElement('xmin')
@@ -135,6 +157,7 @@ if __name__ == '__main__':
             generate_xml(name,img_size)
         except:
             print 'Fuck! Something wrong!'
+    
     
     
 
