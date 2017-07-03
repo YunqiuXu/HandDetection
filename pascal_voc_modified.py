@@ -31,8 +31,12 @@ class pascal_voc(imdb):
     self._image_set = image_set
     self._devkit_path = self._get_default_path() if devkit_path is None \
       else devkit_path
-    self._data_path = os.path.join(self._devkit_path, 'VOC' + self._year)
     #[Hand Detection]
+    self._hand_path = cfg.DATA_DIR #./data/
+    self._data_path = os.path.join(self._hand_path, 'LISA_HD_Static','detectiondata')#Same as VOC2007/
+
+    #self._data_path = os.path.join(self._devkit_path, 'VOC' + self._year)
+
     #Substitute original _classes with 1+4 classes 
     #["leftHand_driver","rightHand_driver","leftHand_passenger","rightHand_passenger"]+background
 
@@ -166,12 +170,15 @@ class pascal_voc(imdb):
     for ix, obj in enumerate(objs):
       bbox = obj.find('bndbox')
       # Make pixel indexes 0-based
-      # Delete "-1" cause it is only used in matlab
+      #Delete -1
       x1 = float(bbox.find('xmin').text) 
       y1 = float(bbox.find('ymin').text) 
       x2 = float(bbox.find('xmax').text) 
       y2 = float(bbox.find('ymax').text) 
-      cls = self._class_to_ind[obj.find('name').text.lower().strip()]
+      #[Hand Detection]
+      #cls = self._class_to_ind[obj.find('name').text.lower().strip()]
+      cls = self._class_to_ind[obj.find('name').text.strip()] #Delete lower(), cause the annotation class has upper case.
+
       boxes[ix, :] = [x1, y1, x2, y2]
       gt_classes[ix] = cls
       overlaps[ix, cls] = 1.0
