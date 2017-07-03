@@ -2,7 +2,7 @@
 # Tensorflow Faster R-CNN
 # Licensed under The MIT License [see LICENSE for details]
 # Written by Xinlei Chen
-# Modified by Yunqiu Xu
+# Modified by Yunqiu Xu and Shaoshen Wang
 # --------------------------------------------------------
 
 
