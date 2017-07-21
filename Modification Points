@@ -22,8 +22,7 @@ y2 = float(bbox.find('ymax').text)-1
 
 Vgg16:
 1）修改网络
-2）添加slice操作修复concat之后channel多余的问题
-3）修改load pretrain model时需要加载的参数
+2）修改load pretrain model时需要加载的参数
 
 Error: Train loss 出现NAN：
 重新制作数据集，问题消失，怀疑之前数据集有损坏。
@@ -34,5 +33,10 @@ Label长度代表了anchor数量
 修改network.py self._feat_stride, self._feat_compress 
 从16改为4.
 Change this ratio to 4 = input width/conv5 width = 224/56 = 4 in modified case
+
+
+Testing:
+Vgg16.py:
+修改concate 维度为-1，即channel
 
 
