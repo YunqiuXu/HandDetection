@@ -43,6 +43,6 @@ voc_eval.py:
 
 注释掉部分evaluation的代码，把结果改成正确格式output到txt里面.
 
-
+mAP低可能由于train不充分
 
 
