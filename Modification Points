@@ -44,5 +44,6 @@ voc_eval.py:
 注释掉部分evaluation的代码，把结果改成正确格式output到txt里面.
 
 mAP低可能由于train不充分
-
-
+需要调整thresh
+testing得到很多bbox的坐标heconfidence，取
+得到所有testing的结果之后，把预测的box 通过 pascal_voc 的_write_voc_results_file写入了result 文件
