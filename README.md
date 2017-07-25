@@ -3,11 +3,11 @@ Author: Yunqiu Xu, Shaoshen Wang
 
 ## Changes
 ### data/LISA_HD_Static
-        + Download and unzip data from http://cvrr.ucsd.edu/vivachallenge/index.php/hands/hand-detection/
-        + move 'LISA_annotation_to_VOC.py' and 'LISA_posGt_to_VOC_main.py' to /LISA_HD_Static/detectiondata
-        + LISA_annotation_to_VOC.py  -- change dataset to VOC2007 form
-        + LISA_posGt_to_VOC_main.py  -- split the dataset into train/cv/test, files are in ImageSets/Main
-        + Thus we generate 4 txt file train.txt val.txt trainval.txt test.txt under Main
++ Download and unzip data from http://cvrr.ucsd.edu/vivachallenge/index.php/hands/hand-detection/
++ move 'LISA_annotation_to_VOC.py' and 'LISA_posGt_to_VOC_main.py' to /LISA_HD_Static/detectiondata
++ LISA_annotation_to_VOC.py  -- change dataset to VOC2007 form
++ LISA_posGt_to_VOC_main.py  -- split the dataset into train/cv/test, files are in ImageSets/Main
++ Thus we generate 4 txt file train.txt val.txt trainval.txt test.txt under Main
         
 ```python
 # VOC2007 download from http://people.csail.mit.edu/tomasz/VOCdevkit/
