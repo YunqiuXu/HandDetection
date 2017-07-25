@@ -1,6 +1,10 @@
 # HandDetection
 Modify faster-rcnn for hand detection 
 
+# Preprocessing
+~/tf-faster-rcnn-endernewton/data/LISA_HD_Static/detectiondata$ python LISA_posGt_to_VOC_Annotations.py
+~/tf-faster-rcnn-endernewton/data/LISA_HD_Static/detectiondata$ python LISA_posGt_to_VOC_Main.py
+
 # Train
 ./experiments/scripts/train_faster_rcnn.sh 0 pascal_voc vgg16 </br>
 
