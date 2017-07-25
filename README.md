@@ -5,7 +5,7 @@ Modify faster-rcnn for hand detection
 ./experiments/scripts/train_faster_rcnn.sh 0 pascal_voc vgg16 </br>
 
 # Test
-Modifiy the iter times in test_faster_rcnn.sh
+Modifiy the iter times in test_faster_rcnn.sh </br>
 ./experiments/scripts/test_faster_rcnn.sh 0 pascal_voc vgg16 </br>
 
 # How to do prediction on your own dataset
