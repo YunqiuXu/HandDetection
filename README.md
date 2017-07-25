@@ -6,11 +6,11 @@ Modify faster-rcnn for hand detection
 ~/tf-faster-rcnn-endernewton/data/LISA_HD_Static/detectiondata$ python LISA_posGt_to_VOC_Main.py </br>
 
 # Train
-./experiments/scripts/train_faster_rcnn.sh 0 pascal_voc vgg16 </br>
+~/tf-faster-rcnn-endernewton$ ./experiments/scripts/train_faster_rcnn.sh 0 pascal_voc vgg16 </br>
 
 # Test
 Modifiy the iter times in test_faster_rcnn.sh </br>
-./experiments/scripts/test_faster_rcnn.sh 0 pascal_voc vgg16 </br>
+~/tf-faster-rcnn-endernewton$ ./experiments/scripts/test_faster_rcnn.sh 0 pascal_voc vgg16 </br>
 
 # How to do prediction on your own dataset
 
