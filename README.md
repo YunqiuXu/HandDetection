@@ -45,27 +45,27 @@ Author: Yunqiu Xu, Shaoshen Wang
         
         
 ### data/cache
-        + if you change model or training set, you need delete this folder
-        + previous files may be saved in this folder, we should not load them in new loops
++ if you change model or training set, you need delete this folder
++ previous files may be saved in this folder, we should not load them in new loops
 ### lib/model/config.py
-        + __C.TRAIN.USE_FLIPPED = False -- do not use data augmentation
-        + We can change other paramaters as well(e.g. learning rate)
++ __C.TRAIN.USE_FLIPPED = False -- do not use data augmentation
++ We can change other paramaters as well(e.g. learning rate)
 ### lib/datasets/pascal_voc.py
-        + line 43: change the classes        
-        + line 47: '.jpg' --> '.png'
-        + line 167-170: remove '-1' -- original start position is (1,1), now (0,0)
-        + line 180: remove '.lower()' -- otherwise some names will be same
++ line 43: change the classes        
++ line 47: '.jpg' --> '.png'
++ line 167-170: remove '-1' -- original start position is (1,1), now (0,0)
++ line 180: remove '.lower()' -- otherwise some names will be same
 ### lib/nets/vgg16.py
-        + Most changes are based on vgg16 model
-        + line 319: some weights appeared before need to be reloaded
++ Most changes are based on vgg16 model
++ line 319: some weights appeared before need to be reloaded
 ### lib/nets/network.py
-        + line 30: self._feat_stride = [4, ]
-        + line 33: self._feat_compress = [1. / 4., ]
-        + Reason: in original version the shape is 14*14*n, while it's 56*56*n in modified vgg16.py, so the ratio is 224/56 = 4
++ line 30: self._feat_stride = [4, ]
++ line 33: self._feat_compress = [1. / 4., ]
++ Reason: in original version the shape is 14*14*n, while it's 56*56*n in modified vgg16.py, so the ratio is 224/56 = 4
         
 ### lib/datasets/voc_eval.py
-        + define a new function 'transform(line,hand,person)'
-        + some codes are omitted, because we do not need classification result but the submission file
++ define a new function 'transform(line,hand,person)'
++ some codes are omitted, because we do not need classification result but the submission file
         + if we need to get result, we should use unchanged voc_eval.py
 
 ## Training Process
