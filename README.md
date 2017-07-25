@@ -1,6 +1,12 @@
 # HandDetection
 Modify faster-rcnn for hand detection 
 
+# Train
+./experiments/scripts/train_faster_rcnn.sh 0 pascal_voc vgg16 </br>
+
+# Test
+./experiments/scripts/test_faster_rcnn.sh 0 pascal_voc vgg16 </br>
+
 # How to do prediction on your own dataset
 
 cd tf-faster-rcnn-endernewton/data/LISA_HD_Static/detectiondata/ImageSets/Main </br>
