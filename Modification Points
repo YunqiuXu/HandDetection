@@ -39,7 +39,7 @@ Testing:
 Vgg16.py:
 修改concate 维度为-1，即连接channel的维度
 
-voc_eval.py:
+lib/datasets/voc_eval.py:
 
 注释掉部分evaluation的代码，把结果改成正确格式output到txt里面.
 
