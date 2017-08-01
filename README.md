@@ -51,6 +51,7 @@ Author: Yunqiu Xu, Shaoshen Wang
 + __C.TRAIN.USE_FLIPPED = False -- do not use data augmentation
 + We can change other paramaters as well(e.g. learning rate)
 ### lib/datasets/pascal_voc.py
++ Change the path --> LISA
 + line 43: change the classes        
 + line 47: '.jpg' --> '.png'
 + line 167-170: remove '-1' -- original start position is (1,1), now (0,0)
@@ -69,12 +70,14 @@ Author: Yunqiu Xu, Shaoshen Wang
         + if we need to get result, we should use unchanged voc_eval.py
 
 ## Training Process
++ Before training, we need to change the imageset and train.txt
 ```shell
 ~/tf-faster-rcnn-endernewton$ ./experiments/scripts/train_faster_rcnn.sh 0 pascal_voc vgg16
 ```
 + For every 20 iters a model will be built, only the latest 3 models will be saved
 
 ## Testing Process
++ Change the test.txt if needed
 + Modifiy the iter times in test_faster_rcnn.sh
         + Check the models in output/vgg16/voc_2007_trainval/default
         + If the model is vgg16_faster_rcnn_iter_10740.pkl, we need to set iter times as 10740
