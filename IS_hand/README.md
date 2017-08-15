@@ -13,7 +13,7 @@
 ```python
 roidb_size = len(self._roidb)
 if roidb_size > 1000:
-       minibatch_db = [self._roidb[int(i*roidb_size*1.0/5225)] for i in db_inds]
+    minibatch_db = [self._roidb[int(i*roidb_size*1.0/5225)] for i in db_inds]
 else:
-       minibatch_db = [self._roidb[int(i*roidb_size*1.0/275)] for i in db_inds]
+    minibatch_db = [self._roidb[int(i*roidb_size*1.0/275)] for i in db_inds]
 ```
