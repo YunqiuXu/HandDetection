@@ -26,10 +26,10 @@ from model.config import cfg
 class Network(object):
   def __init__(self, batch_size=1):
     #Change this ratio to 4 = input width/conv5 width = 224/56 = 4 in modified case
-    #Old：self._feat_stride = [16, ]
+    #Old: self._feat_stride = [16, ]
     self._feat_stride = [4, ]
     #Change this ratio to 4 ,same as above
-    #Old：self._feat_compress = [1. / 16., ]
+    #Old: self._feat_compress = [1. / 16., ]
     self._feat_compress = [1. / 4., ]
 
     self._batch_size = batch_size
