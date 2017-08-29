@@ -17,3 +17,14 @@ if roidb_size > 1000:
 else:
     minibatch_db = [self._roidb[int(i*roidb_size*1.0/275)] for i in db_inds]
 ```
+
++ Use model pretrained on LISA to train on ISIS
+    + Restored from LISA 10740 iters
+    + Run on ISIS till 16200 iters
+    
+## updated on 2017-08-29
++ The result of LISA-10740-ISIS-16200 is not good that the recall is too high
++ Till now there are several ways to modify:
+    + Enlarge the dataset: currently there are only 500+ in training set and 66 in testing/CV set
+    + Use more robust basenet: e.g. ResNet
+    + Seek other network: e.g. DenseNet, MaskRCNN
