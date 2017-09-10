@@ -1,7 +1,6 @@
 # Configs
 
 ## Install tensorflow without root
-
 ```python
 lspci | grep -i nvidia # check the version of GPU
 
@@ -21,6 +20,7 @@ make install
 Note that you need to change the path to set it as higher priority if there are more than one "cmake" 
 
 ## Change the path temperally
++ (Updated on 2017-08-29) Do not need to do this again, I have change the path in .bashrc
 ```shell
 export PATH="path1:path2:path3"
 echo $PATH # check your path

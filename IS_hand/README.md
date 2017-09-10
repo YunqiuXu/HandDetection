@@ -26,5 +26,18 @@ else:
 + The result of LISA-10740-ISIS-16200 is not good that the recall is too high
 + Till now there are several ways to modify:
     + Enlarge the dataset: currently there are only 500+ in training set and 66 in testing/CV set
+        + Use data augmentation
+        + Label more data
     + Use more robust basenet: e.g. ResNet
     + Seek other network: e.g. DenseNet, MaskRCNN
+    
+## updated on 2017-09-08
++ Download the model again and try to run on ResNet
++ Encounter error: [https://github.com/endernewton/tf-faster-rcnn/issues/107](https://github.com/endernewton/tf-faster-rcnn/issues/107)
+```python
+# Change lib/model/train_val.py Line278
+blobs = self.data_layer.forward() 
+if blobs['gt_boxes'][0][1] > blobs['gt_boxes'][0][3]:
+    iter += 1    
+    continue
+```
