@@ -35,9 +35,26 @@ else:
 + Download the model again and try to run on ResNet
 + Encounter error: [https://github.com/endernewton/tf-faster-rcnn/issues/107](https://github.com/endernewton/tf-faster-rcnn/issues/107)
 ```python
-# Change lib/model/train_val.py Line278
-blobs = self.data_layer.forward() 
-if blobs['gt_boxes'][0][1] > blobs['gt_boxes'][0][3]:
-    iter += 1    
-    continue
+# change pascal_voc.py LINE167
+# remove all "-1"
+x1 = float(bbox.find('xmin').text)
+y1 = float(bbox.find('ymin').text)
+x2 = float(bbox.find('xmax').text)
+y2 = float(bbox.find('ymax').text)
 ```
++ Encounter error \[Solved\] : Nan in summary histogram
+    + maybe this is because GPU arch
+    + Before mine is "sm_35" for Tesla K40, now I change it to "sm_50" for Quadro 620
+
++ Still can not solve the nega log error, now try to apply new dataset to vgg16 in LISA
+    + Encounter error in batch norm: Expected list for attr squeeze_dims
+        + The error is in nn.moments: change axies to list(axies)
++ Encounter error: imdb.py "assert (boxes[:, 2] >= boxes[:, 0]).all()"
+```python
+for b in range(len(boxes)):
+  if boxes[b][2]< boxes[b][0]:
+    boxes[b][0] = 0
+```        
++ Till now the error of nega log can be solved
+    
+
