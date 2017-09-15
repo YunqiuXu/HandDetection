@@ -1,7 +1,7 @@
-# Hand Detection for IS
+# Change Log
 
-+ I've trained on about 587 images and tested on 66 images, the performance is not so good
-+ I will use pretrained LISA model
+## Updated on 2017-08-24
++ Run on pre-trained LISA model
 + Prob 1(solved)
     + Different from load vgg16 directly, it seems that if I restore a model instead of loading vgg16 directly, the num_classes needs to be same with before, otherwise it will output InvalidArgumentError
     + So I change pascal_voc.py to add 2 useless classes
@@ -22,7 +22,7 @@ else:
     + Restored from LISA 10740 iters
     + Run on ISIS till 16200 iters
     
-## updated on 2017-08-29
+## Updated on 2017-08-29
 + The result of LISA-10740-ISIS-16200 is not good that the recall is too high
 + Till now there are several ways to modify:
     + Enlarge the dataset: currently there are only 500+ in training set and 66 in testing/CV set
@@ -31,30 +31,36 @@ else:
     + Use more robust basenet: e.g. ResNet
     + Seek other network: e.g. DenseNet, MaskRCNN
     
-## updated on 2017-09-08
+## Updated on 2017-09-08
 + Download the model again and try to run on ResNet
-+ Encounter error: [https://github.com/endernewton/tf-faster-rcnn/issues/107](https://github.com/endernewton/tf-faster-rcnn/issues/107)
++ Prob 1(solved): [https://github.com/endernewton/tf-faster-rcnn/issues/107](https://github.com/endernewton/tf-faster-rcnn/issues/107)
+    + change pascal_voc.py LINE167, remove all "-1"
 ```python
-# change pascal_voc.py LINE167
-# remove all "-1"
 x1 = float(bbox.find('xmin').text)
 y1 = float(bbox.find('ymin').text)
 x2 = float(bbox.find('xmax').text)
 y2 = float(bbox.find('ymax').text)
 ```
-+ Encounter error \[Solved\] : Nan in summary histogram
-    + maybe this is because GPU arch
-    + Before mine is "sm_35" for Tesla K40, now I change it to "sm_50" for Quadro 620
-
-+ Still can not solve the nega log error, now try to apply new dataset to vgg16 in LISA
-    + Encounter error in batch norm: Expected list for attr squeeze_dims
-        + The error is in nn.moments: change axies to list(axies)
-+ Encounter error: imdb.py "assert (boxes[:, 2] >= boxes[:, 0]).all()"
+    + Maybe it's because GPU arch
+        + Tesla K40c : sm_35
+        + Quadro 620 : sm_50
++ Prob 2(solved): imdb.py "assert (boxes[:, 2] >= boxes[:, 0]).all()"
 ```python
 for b in range(len(boxes)):
   if boxes[b][2]< boxes[b][0]:
     boxes[b][0] = 0
 ```        
-+ Till now the error of nega log can be solved
++ Resnet-30000, result is decent --> crop
+    + map 0.70
+    + By standarize the images we can get better result!
+    + however there maybe similar images among training and testing set
+
+## updated on 2017-09-15
++ Reuse modified vgg16, run on resized images
++ Since tf-faster-rcnn changes a lot, I will not use previous vgg16.py any longer. Instead, I modify the new vgg16.py, and network.py to fit current program. For more details, see VGG16Modified
+    + vgg16_modified.py
+    + network_modified.py
++ Warning, for resnet101, you should rename network_original.py to network.py
+    
     
 

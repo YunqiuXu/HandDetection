@@ -1,7 +1,7 @@
 # draw bounding box
 # Yunqiu Xu
 
-# Put this file in the path of YES_and_NO.txt
+# Put this file in the path of Yes.txt and No.txt
 # YES --> (255,0,0), blue
 # NO --> (0,255,0), green
 import cv2
@@ -17,7 +17,7 @@ def draw_bounding_box(line):
 
     print "Processing " + img_name
 
-    img_path = "/home/venturer/google_image/ISIS/ISIS_result/test_img_with_bb/" + img_name + ".jpg"
+    img_path = "/home/venturer/google_image/0-818_resized/0-818_result/test_images/" + img_name + ".jpg"
     img = cv2.imread(img_path)
     img = img.copy()
 
@@ -30,6 +30,9 @@ def draw_bounding_box(line):
     
 
 if __name__ == "__main__":
-    with open("YES_and_NO.txt") as f:
+    with open("YES.txt") as f:
+        for line in f.readlines():
+            draw_bounding_box(line)
+    with open("NO.txt") as f:
         for line in f.readlines():
             draw_bounding_box(line)

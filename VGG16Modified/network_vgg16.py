@@ -2,8 +2,15 @@
 # Tensorflow Faster R-CNN
 # Licensed under The MIT License [see LICENSE for details]
 # Written by Xinlei Chen
-# Modified by Shaoshen Wang
+# Modified by Yunqiu Xu for hand detection
+# Different from original, can only be used for modified vgg16
 # --------------------------------------------------------
+
+
+
+# FBI WARNING: CAN ONLY BE USED FOR MODIFIED VGG16 !!! #
+
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -20,50 +27,40 @@ from layer_utils.proposal_layer import proposal_layer
 from layer_utils.proposal_top_layer import proposal_top_layer
 from layer_utils.anchor_target_layer import anchor_target_layer
 from layer_utils.proposal_target_layer import proposal_target_layer
+from utils.visualization import draw_bounding_boxes
 
 from model.config import cfg
 
 class Network(object):
-  def __init__(self, batch_size=1):
-    #Change this ratio to 4 = input width/conv5 width = 224/56 = 4 in modified case
-    #Old: self._feat_stride = [16, ]
-    self._feat_stride = [4, ]
-    #Change this ratio to 4 ,same as above
-    #Old: self._feat_compress = [1. / 16., ]
-    self._feat_compress = [1. / 4., ]
-
-    self._batch_size = batch_size
+  def __init__(self):
     self._predictions = {}
     self._losses = {}
     self._anchor_targets = {}
     self._proposal_targets = {}
     self._layers = {}
+    self._gt_image = None
     self._act_summaries = []
     self._score_summaries = {}
     self._train_summaries = []
     self._event_summaries = {}
+    self._variables_to_fix = {}
 
-  def _add_image_summary(self, image, boxes):
+  def _add_gt_image(self):
     # add back mean
-    image += cfg.PIXEL_MEANS
-    # bgr to rgb (opencv uses bgr)
-    channels = tf.unstack (image, axis=-1)
-    image    = tf.stack ([channels[2], channels[1], channels[0]], axis=-1)
-    # dims for normalization
-    width  = tf.to_float(tf.shape(image)[2])
-    height = tf.to_float(tf.shape(image)[1])
-    # from [x1, y1, x2, y2, cls] to normalized [y1, x1, y1, x1]
-    cols = tf.unstack(boxes, axis=1)
-    boxes = tf.stack([cols[1] / height,
-                      cols[0] / width,
-                      cols[3] / height,
-                      cols[2] / width], axis=1)
-    # add batch dimension (assume batch_size==1)
-    assert image.get_shape()[0] == 1
-    boxes = tf.expand_dims(boxes, dim=0)
-    image = tf.image.draw_bounding_boxes(image, boxes)
+    image = self._image + cfg.PIXEL_MEANS
+    # BGR to RGB (opencv uses BGR)
+    resized = tf.image.resize_bilinear(image, tf.to_int32(self._im_info[:2] / self._im_info[2]))
+    self._gt_image = tf.reverse(resized, axis=[-1])
+
+  def _add_gt_image_summary(self):
+    # use a customized visualization function to visualize the boxes
+    if self._gt_image is None:
+      self._add_gt_image()
+    image = tf.py_func(draw_bounding_boxes, 
+                      [self._gt_image, self._gt_boxes, self._im_info],
+                      tf.float32, name="gt_boxes")
     
-    return tf.summary.image('ground_truth', image)
+    return tf.summary.image('GROUND_TRUTH', image)
 
   def _add_act_summary(self, tensor):
     tf.summary.histogram('ACT/' + tensor.op.name + '/activations', tensor)
@@ -83,13 +80,13 @@ class Network(object):
       to_caffe = tf.transpose(bottom, [0, 3, 1, 2])
       # then force it to have channel 2
       reshaped = tf.reshape(to_caffe,
-                            tf.concat(axis=0, values=[[self._batch_size], [num_dim, -1], [input_shape[2]]]))
+                            tf.concat(axis=0, values=[[1, num_dim, -1], [input_shape[2]]]))
       # then swap the channel back
       to_tf = tf.transpose(reshaped, [0, 2, 3, 1])
       return to_tf
 
   def _softmax_layer(self, bottom, name):
-    if name == 'rpn_cls_prob_reshape':
+    if name.startswith('rpn_cls_prob_reshape'):
       input_shape = tf.shape(bottom)
       bottom_reshaped = tf.reshape(bottom, [-1, input_shape[-1]])
       reshaped_score = tf.nn.softmax(bottom_reshaped, name=name)
@@ -101,7 +98,7 @@ class Network(object):
       rois, rpn_scores = tf.py_func(proposal_top_layer,
                                     [rpn_cls_prob, rpn_bbox_pred, self._im_info,
                                      self._feat_stride, self._anchors, self._num_anchors],
-                                    [tf.float32, tf.float32])
+                                    [tf.float32, tf.float32], name="proposal_top")
       rois.set_shape([cfg.TEST.RPN_TOP_N, 5])
       rpn_scores.set_shape([cfg.TEST.RPN_TOP_N, 1])
 
@@ -112,7 +109,7 @@ class Network(object):
       rois, rpn_scores = tf.py_func(proposal_layer,
                                     [rpn_cls_prob, rpn_bbox_pred, self._im_info, self._mode,
                                      self._feat_stride, self._anchors, self._num_anchors],
-                                    [tf.float32, tf.float32])
+                                    [tf.float32, tf.float32], name="proposal")
       rois.set_shape([None, 5])
       rpn_scores.set_shape([None, 1])
 
@@ -129,7 +126,7 @@ class Network(object):
   def _crop_pool_layer(self, bottom, rois, name):
     with tf.variable_scope(name) as scope:
       batch_ids = tf.squeeze(tf.slice(rois, [0, 0], [-1, 1], name="batch_id"), [1])
-      # Get the normalized coordinates of bboxes
+      # Get the normalized coordinates of bounding boxes
       bottom_shape = tf.shape(bottom)
       height = (tf.to_float(bottom_shape[1]) - 1.) * np.float32(self._feat_stride[0])
       width = (tf.to_float(bottom_shape[2]) - 1.) * np.float32(self._feat_stride[0])
@@ -137,7 +134,7 @@ class Network(object):
       y1 = tf.slice(rois, [0, 2], [-1, 1], name="y1") / height
       x2 = tf.slice(rois, [0, 3], [-1, 1], name="x2") / width
       y2 = tf.slice(rois, [0, 4], [-1, 1], name="y2") / height
-      # Won't be backpropagated to rois anyway, but to save time
+      # Won't be back-propagated to rois anyway, but to save time
       bboxes = tf.stop_gradient(tf.concat([y1, x1, y2, x2], axis=1))
       pre_pool_size = cfg.POOLING_SIZE * 2
       crops = tf.image.crop_and_resize(bottom, bboxes, tf.to_int32(batch_ids), [pre_pool_size, pre_pool_size], name="crops")
@@ -152,7 +149,8 @@ class Network(object):
       rpn_labels, rpn_bbox_targets, rpn_bbox_inside_weights, rpn_bbox_outside_weights = tf.py_func(
         anchor_target_layer,
         [rpn_cls_score, self._gt_boxes, self._im_info, self._feat_stride, self._anchors, self._num_anchors],
-        [tf.float32, tf.float32, tf.float32, tf.float32])
+        [tf.float32, tf.float32, tf.float32, tf.float32],
+        name="anchor_target")
 
       rpn_labels.set_shape([1, 1, None, None])
       rpn_bbox_targets.set_shape([1, None, None, self._num_anchors * 4])
@@ -174,7 +172,8 @@ class Network(object):
       rois, roi_scores, labels, bbox_targets, bbox_inside_weights, bbox_outside_weights = tf.py_func(
         proposal_target_layer,
         [rois, roi_scores, self._gt_boxes, self._num_classes],
-        [tf.float32, tf.float32, tf.float32, tf.float32, tf.float32, tf.float32])
+        [tf.float32, tf.float32, tf.float32, tf.float32, tf.float32, tf.float32],
+        name="proposal_target")
 
       rois.set_shape([cfg.TRAIN.BATCH_SIZE, 5])
       roi_scores.set_shape([cfg.TRAIN.BATCH_SIZE])
@@ -196,22 +195,131 @@ class Network(object):
   def _anchor_component(self):
     with tf.variable_scope('ANCHOR_' + self._tag) as scope:
       # just to get the shape right
-
-      height = tf.to_int32(tf.ceil(self._im_info[0, 0] / np.float32(self._feat_stride[0])))
-      width = tf.to_int32(tf.ceil(self._im_info[0, 1] / np.float32(self._feat_stride[0])))
-
+      height = tf.to_int32(tf.ceil(self._im_info[0] / np.float32(self._feat_stride[0])))
+      width = tf.to_int32(tf.ceil(self._im_info[1] / np.float32(self._feat_stride[0])))
       anchors, anchor_length = tf.py_func(generate_anchors_pre,
                                           [height, width,
                                            self._feat_stride, self._anchor_scales, self._anchor_ratios],
                                           [tf.float32, tf.int32], name="generate_anchors")
       anchors.set_shape([None, 4])
-      
       anchor_length.set_shape([])
       self._anchors = anchors
       self._anchor_length = anchor_length
 
-  def build_network(self, sess, is_training=True):
-    raise NotImplementedError
+  # [Hand Detection] Batch normalization
+  # http://stackoverflow.com/a/34634291/2267819
+  # Note that this is different from the paper(they use another method)
+  def batch_norm_layer(self, to_be_normalized, is_training):
+    if is_training:
+      train_phase = tf.constant(1)
+    else:
+      train_phase = tf.constant(-1)
+    beta = tf.Variable(tf.constant(0.0, shape=[to_be_normalized.shape[-1]]), name='beta', trainable=True)
+    gamma = tf.Variable(tf.constant(1.0, shape=[to_be_normalized.shape[-1]]), name='gamma', trainable=True)
+    # axises = np.arange(len(to_be_normalized.shape) - 1) # change to apply tensorflow 1.3
+    axises = [0,1,2]
+
+    print("start nn.moments")
+    print("axises : " + str(axises))
+    batch_mean, batch_var = tf.nn.moments(to_be_normalized, axises, name='moments')
+    print("nn.moments successful")
+    ema = tf.train.ExponentialMovingAverage(decay=0.5)
+
+    def mean_var_with_update():
+        ema_apply_op = ema.apply([batch_mean, batch_var])
+        with tf.control_dependencies([ema_apply_op]):
+            return tf.identity(batch_mean), tf.identity(batch_var)
+
+    mean, var = tf.cond(train_phase > 0, mean_var_with_update, lambda: (ema.average(batch_mean), ema.average(batch_var))) # if is training --> update
+    normed = tf.nn.batch_normalization(to_be_normalized, mean, var, beta, gamma, 1e-3)
+    return normed
+
+  def _build_network(self, is_training=True):
+    # select initializers
+    if cfg.TRAIN.TRUNCATED:
+      initializer = tf.truncated_normal_initializer(mean=0.0, stddev=0.01)
+      initializer_bbox = tf.truncated_normal_initializer(mean=0.0, stddev=0.001)
+    else:
+      initializer = tf.random_normal_initializer(mean=0.0, stddev=0.01)
+      initializer_bbox = tf.random_normal_initializer(mean=0.0, stddev=0.001)
+
+    # [Hand Detection, note that this function has been modified in vgg16.py]
+    # 3 layers of 56 * 56 * 256
+    to_be_normalized_1, to_be_normalized_2, to_be_normalized_3 = self._image_to_head(is_training)
+
+    # -------------
+    # Now as we get to_be_normalized_1 / to_be_normalized_2 / to_be_normalized_3, each is 56 * 56 * 256
+    # For RPN , we need to: 
+    # 1. normalize each to_be_normalized layer
+    # 2. concat 3 normalized layers
+    # 3. change the dimension using 1 * 1 conv
+    # 3. Then the modified net can be used in RPN
+    # 
+    # For ROI pooling, we need to:
+    # 1. put each conv output into its ROI pooling (so there should be 3 ROI pooling layers)
+    # 2. normalize each layer
+    # 3. concat them
+    # 4. change the dimension using 1 * 1 conv
+    # -------------
+
+    # normalisation
+    normed_1_rpn = self.batch_norm_layer(to_be_normalized_1, is_training)
+    normed_2_rpn = self.batch_norm_layer(to_be_normalized_2, is_training)
+    normed_3_rpn = self.batch_norm_layer(to_be_normalized_3, is_training)
+
+    # [Hand Detection] Concatation for RPN (56 * 56 * 768)
+    concated_rpn = tf.concat([normed_1_rpn, normed_2_rpn, normed_3_rpn], -1)
+
+    # [Hand Detection] 1 * 1 conv to get 56 * 56 * 512
+    scaled_rpn = slim.conv2d(concated_rpn, 512, [1, 1], trainable=is_training, weights_initializer=initializer, scope="scaled_rpn/1x1")
+
+    self._act_summaries.append(scaled_rpn)
+    self._layers['head'] = scaled_rpn
+
+    with tf.variable_scope(self._scope, self._scope):
+      # build the anchors for the image
+      self._anchor_component()
+
+      # ----- RPN Begin -----
+      # [Hand Detection] region proposal network, note the input is 56 * 56 * 512
+      rois = self._region_proposal(scaled_rpn, is_training, initializer)
+      # ----- RPN End -----
+
+      # ----- ROI Begin -----
+      # region of interest pooling
+      if cfg.POOLING_MODE == 'crop':
+        # get roi layers
+        roi1 = self._crop_pool_layer(to_be_normalized_1, rois, "roi1") # 28 * 28 * 256
+        roi2 = self._crop_pool_layer(to_be_normalized_2, rois, "roi2") # 28 * 28 * 256
+        roi3 = self._crop_pool_layer(to_be_normalized_3, rois, "roi3") # 28 * 28 * 256
+        # normalization
+        normed_1_roi = self.batch_norm_layer(roi1, is_training)
+        normed_2_roi = self.batch_norm_layer(roi2, is_training)
+        normed_3_roi = self.batch_norm_layer(roi3, is_training)
+        # concat
+        concated_roi = tf.concat([normed_1_roi, normed_2_roi, normed_3_roi], -1) # 28 * 28 * 768
+
+        # [Hand Detection] I don not know why this exists
+        # if is_training:
+        #   channel1 = 256
+        # else:
+        #   channel1 = 300
+
+        # 28 * 28 * 512
+        pool5 = slim.conv2d(concated_roi,512, [1, 1], trainable=is_training, weights_initializer=initializer, scope="pool5/1x1")
+      else:
+        raise NotImplementedError
+      # ----- ROI End -----
+
+    fc7 = self._head_to_tail(pool5, is_training)
+    with tf.variable_scope(self._scope, self._scope):
+      # region classification
+      cls_prob, bbox_pred = self._region_classification(fc7, is_training, 
+                                                        initializer, initializer_bbox)
+
+    self._score_summaries.update(self._predictions)
+
+    return rois, cls_prob, bbox_pred
 
   def _smooth_l1_loss(self, bbox_pred, bbox_targets, bbox_inside_weights, bbox_outside_weights, sigma=1.0, dim=[1]):
     sigma_2 = sigma ** 2
@@ -229,7 +337,7 @@ class Network(object):
     return loss_box
 
   def _add_losses(self, sigma_rpn=3.0):
-    with tf.variable_scope('loss_' + self._tag) as scope:
+    with tf.variable_scope('LOSS_' + self._tag) as scope:
       # RPN, class loss
       rpn_cls_score = tf.reshape(self._predictions['rpn_cls_score_reshape'], [-1, 2])
       rpn_label = tf.reshape(self._anchor_targets['rpn_labels'], [-1])
@@ -244,24 +352,19 @@ class Network(object):
       rpn_bbox_targets = self._anchor_targets['rpn_bbox_targets']
       rpn_bbox_inside_weights = self._anchor_targets['rpn_bbox_inside_weights']
       rpn_bbox_outside_weights = self._anchor_targets['rpn_bbox_outside_weights']
-
       rpn_loss_box = self._smooth_l1_loss(rpn_bbox_pred, rpn_bbox_targets, rpn_bbox_inside_weights,
                                           rpn_bbox_outside_weights, sigma=sigma_rpn, dim=[1, 2, 3])
 
       # RCNN, class loss
       cls_score = self._predictions["cls_score"]
       label = tf.reshape(self._proposal_targets["labels"], [-1])
-
-      cross_entropy = tf.reduce_mean(
-        tf.nn.sparse_softmax_cross_entropy_with_logits(
-          logits=tf.reshape(cls_score, [-1, self._num_classes]), labels=label))
+      cross_entropy = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=cls_score, labels=label))
 
       # RCNN, bbox loss
       bbox_pred = self._predictions['bbox_pred']
       bbox_targets = self._proposal_targets['bbox_targets']
       bbox_inside_weights = self._proposal_targets['bbox_inside_weights']
       bbox_outside_weights = self._proposal_targets['bbox_outside_weights']
-
       loss_box = self._smooth_l1_loss(bbox_pred, bbox_targets, bbox_inside_weights, bbox_outside_weights)
 
       self._losses['cross_entropy'] = cross_entropy
@@ -276,10 +379,76 @@ class Network(object):
 
     return loss
 
-  def create_architecture(self, sess, mode, num_classes, tag=None,
+  def _region_proposal(self, net_conv, is_training, initializer):
+
+    # [Hand Detection]
+    # note RPN_CHANNELS = 512
+    rpn = slim.conv2d(net_conv, cfg.RPN_CHANNELS, [3, 3], trainable=is_training, weights_initializer=initializer,
+                        scope="rpn_conv/3x3")
+    self._act_summaries.append(rpn)
+    rpn_cls_score = slim.conv2d(rpn, self._num_anchors * 2, [1, 1], trainable=is_training,
+                                weights_initializer=initializer,
+                                padding='VALID', activation_fn=None, scope='rpn_cls_score')
+    # change it so that the score has 2 as its channel size
+    rpn_cls_score_reshape = self._reshape_layer(rpn_cls_score, 2, 'rpn_cls_score_reshape')
+    rpn_cls_prob_reshape = self._softmax_layer(rpn_cls_score_reshape, "rpn_cls_prob_reshape")
+    rpn_cls_pred = tf.argmax(tf.reshape(rpn_cls_score_reshape, [-1, 2]), axis=1, name="rpn_cls_pred")
+    rpn_cls_prob = self._reshape_layer(rpn_cls_prob_reshape, self._num_anchors * 2, "rpn_cls_prob")
+    rpn_bbox_pred = slim.conv2d(rpn, self._num_anchors * 4, [1, 1], trainable=is_training,
+                                weights_initializer=initializer,
+                                padding='VALID', activation_fn=None, scope='rpn_bbox_pred')
+    if is_training:
+      rois, roi_scores = self._proposal_layer(rpn_cls_prob, rpn_bbox_pred, "rois")
+      rpn_labels = self._anchor_target_layer(rpn_cls_score, "anchor")
+      # Try to have a deterministic order for the computing graph, for reproducibility
+      with tf.control_dependencies([rpn_labels]):
+        rois, _ = self._proposal_target_layer(rois, roi_scores, "rpn_rois")
+    else:
+      if cfg.TEST.MODE == 'nms':
+        rois, _ = self._proposal_layer(rpn_cls_prob, rpn_bbox_pred, "rois")
+      elif cfg.TEST.MODE == 'top':
+        rois, _ = self._proposal_top_layer(rpn_cls_prob, rpn_bbox_pred, "rois")
+      else:
+        raise NotImplementedError
+
+    self._predictions["rpn_cls_score"] = rpn_cls_score
+    self._predictions["rpn_cls_score_reshape"] = rpn_cls_score_reshape
+    self._predictions["rpn_cls_prob"] = rpn_cls_prob
+    self._predictions["rpn_cls_pred"] = rpn_cls_pred
+    self._predictions["rpn_bbox_pred"] = rpn_bbox_pred
+    self._predictions["rois"] = rois
+
+    return rois
+
+  def _region_classification(self, fc7, is_training, initializer, initializer_bbox):
+    cls_score = slim.fully_connected(fc7, self._num_classes, 
+                                       weights_initializer=initializer,
+                                       trainable=is_training,
+                                       activation_fn=None, scope='cls_score')
+    cls_prob = self._softmax_layer(cls_score, "cls_prob")
+    cls_pred = tf.argmax(cls_score, axis=1, name="cls_pred")
+    bbox_pred = slim.fully_connected(fc7, self._num_classes * 4, 
+                                     weights_initializer=initializer_bbox,
+                                     trainable=is_training,
+                                     activation_fn=None, scope='bbox_pred')
+
+    self._predictions["cls_score"] = cls_score
+    self._predictions["cls_pred"] = cls_pred
+    self._predictions["cls_prob"] = cls_prob
+    self._predictions["bbox_pred"] = bbox_pred
+
+    return cls_prob, bbox_pred
+
+  def _image_to_head(self, is_training, reuse=False):
+    raise NotImplementedError
+
+  def _head_to_tail(self, pool5, is_training, reuse=False):
+    raise NotImplementedError
+
+  def create_architecture(self, mode, num_classes, tag=None,
                           anchor_scales=(8, 16, 32), anchor_ratios=(0.5, 1, 2)):
-    self._image = tf.placeholder(tf.float32, shape=[self._batch_size, None, None, 3])
-    self._im_info = tf.placeholder(tf.float32, shape=[self._batch_size, 3])
+    self._image = tf.placeholder(tf.float32, shape=[1, None, None, 3])
+    self._im_info = tf.placeholder(tf.float32, shape=[3])
     self._gt_boxes = tf.placeholder(tf.float32, shape=[None, 5])
     self._tag = tag
 
@@ -311,15 +480,14 @@ class Network(object):
                     weights_regularizer=weights_regularizer,
                     biases_regularizer=biases_regularizer, 
                     biases_initializer=tf.constant_initializer(0.0)): 
-      rois, cls_prob, bbox_pred = self.build_network(sess, training)
+      rois, cls_prob, bbox_pred = self._build_network(training)
 
     layers_to_output = {'rois': rois}
-    layers_to_output.update(self._predictions)
 
     for var in tf.trainable_variables():
       self._train_summaries.append(var)
 
-    if mode == 'TEST':
+    if testing:
       stds = np.tile(np.array(cfg.TRAIN.BBOX_NORMALIZE_STDS), (self._num_classes))
       means = np.tile(np.array(cfg.TRAIN.BBOX_NORMALIZE_MEANS), (self._num_classes))
       self._predictions["bbox_pred"] *= stds
@@ -328,23 +496,30 @@ class Network(object):
       self._add_losses()
       layers_to_output.update(self._losses)
 
-    val_summaries = []
-    with tf.device("/cpu:0"):
-      val_summaries.append(self._add_image_summary(self._image, self._gt_boxes))
-      for key, var in self._event_summaries.items():
-        val_summaries.append(tf.summary.scalar(key, var))
-      for key, var in self._score_summaries.items():
-        self._add_score_summary(key, var)
-      for var in self._act_summaries:
-        self._add_act_summary(var)
-      for var in self._train_summaries:
-        self._add_train_summary(var)
+      val_summaries = []
+      with tf.device("/cpu:0"):
+        val_summaries.append(self._add_gt_image_summary())
+        for key, var in self._event_summaries.items():
+          val_summaries.append(tf.summary.scalar(key, var))
+        for key, var in self._score_summaries.items():
+          self._add_score_summary(key, var)
+        for var in self._act_summaries:
+          self._add_act_summary(var)
+        for var in self._train_summaries:
+          self._add_train_summary(var)
 
-    self._summary_op = tf.summary.merge_all()
-    if not testing:
+      self._summary_op = tf.summary.merge_all()
       self._summary_op_val = tf.summary.merge(val_summaries)
 
+    layers_to_output.update(self._predictions)
+
     return layers_to_output
+
+  def get_variables_to_restore(self, variables, var_keep_dic):
+    raise NotImplementedError
+
+  def fix_variables(self, sess, pretrained_model):
+    raise NotImplementedError
 
   # Extract the head feature maps, for example for vgg16 it is conv5_3
   # only useful during testing mode
@@ -357,6 +532,7 @@ class Network(object):
   def test_image(self, sess, image, im_info):
     feed_dict = {self._image: image,
                  self._im_info: im_info}
+
     cls_score, cls_prob, bbox_pred, rois = sess.run([self._predictions["cls_score"],
                                                      self._predictions['cls_prob'],
                                                      self._predictions['bbox_pred'],
