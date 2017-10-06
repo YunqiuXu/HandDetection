@@ -1,0 +1,17 @@
+{
+    "save_dir": "crawler", 
+    "num_downloads_for_each_class": 10000, 
+    "search_file_type": "jpg", 
+    "search_keywords_dict": {
+        "ISIS": [
+            "isis tawheed"
+        ],
+        "Hand": [
+            "hand gesture",
+            "finger gesture"
+        ]
+    }, 
+    "search_cdr_days": 100000, 
+    "output_prefix": "download_urls", 
+    "output_suffix": "google"
+}
