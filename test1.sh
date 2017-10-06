@@ -4,6 +4,8 @@ GPU_ID=$1
 DATASET="pascal_voc"
 NET=$2
 
+mkdir result
+
 case ${NET} in
   vgg16)
     mv lib/nets/network_vgg16.py lib/nets/network.py
