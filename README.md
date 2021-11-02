@@ -1,5 +1,9 @@
 # HandDetection
-Modify faster-rcnn for hand detection 
+This is a Modify faster-rcnn hand detection project.
+This project achieves Top 10 performance in VIVA hand detection competition.
+
+![](pic/arch.png)
+
 
 # Preprocessing
 ~/tf-faster-rcnn-endernewton/data/LISA_HD_Static/detectiondata$ python LISA_posGt_to_VOC_Annotations.py </br>
