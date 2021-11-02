@@ -1,9 +1,13 @@
 # HandDetection
-This is a Modify faster-rcnn hand detection project.
+This is a Modify faster-rcnn hand detection project, developed during my research assistant in Centre of Artificial Intelligence (CAI) in UTS.
 This project achieves Top 10 performance in VIVA hand detection competition.
 
 ![](pic/arch.png)
 
+
+
+
+This project is collaboration with my collegue Yunqiu Xu (https://github.com/YunqiuXu).
 
 # Preprocessing
 ~/tf-faster-rcnn-endernewton/data/LISA_HD_Static/detectiondata$ python LISA_posGt_to_VOC_Annotations.py </br>
@@ -39,5 +43,5 @@ ctrl+c
 
 
 
-+ This project is collaboration with my collegue Yunqiu Xu (https://github.com/YunqiuXu).
+
 
