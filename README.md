@@ -1,5 +1,5 @@
 # HandDetection
-This is a Modify faster-rcnn hand detection project, developed during my research assistant in Centre of Artificial Intelligence (CAI) in UTS.
+This is a Modify faster-rcnn hand detection project, developed during my research assistant in Centre of Artificial Intelligence (CAI) in UTS. </br>
 This project achieves Top 10 performance in VIVA hand detection competition.
 
 ![](pic/arch.png)
