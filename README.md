@@ -32,4 +32,6 @@ cd tf-faster-rcnn-endernewton </br>
 
 tmux attach </br>
 ctrl+c
+
++ This project is collaboration with my college Yunqiu Xu (https://github.com/YunqiuXu).
  
