@@ -7,6 +7,10 @@ This project achieves Top 10 performance in VIVA hand detection competition.
 
 
 
+Setup via [https://github.com/endernewton/tf-faster-rcnn](https://github.com/endernewton/tf-faster-rcnn)
+
+Modified the code via [Robust Hand Detection in Vehicles](http://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=7899695) for hand detection.
+
 This project is collaboration with my collegue Yunqiu Xu (https://github.com/YunqiuXu).
 
 # Preprocessing
